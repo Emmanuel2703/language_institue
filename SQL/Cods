@@ -1,1 +1,483 @@
+create database Language_institute
+go
+------------------------------------------
+use Language_institute
+go
+-----------------------------------------------
+                ---parent table---
+create table student(
+student_id int not null primary key,
+student_code varchar(100) null,
+student_name varchar(100) null,
+gender varchar(100) null,
+date_of_birth date null,
+email varchar(100) null,
+mobile varchar(100) null,
+registration_Date date null,
+is_active varchar(100) null,
+)
+-------------------------------------------
+               ---parent table---
+create table teacher (
+teacher_id int not null primary key,
+teacher_name varchar(100) null,
+email varchar(100) null,
+mobile varchar(100) null,
+hire_date date null,
+is_active varchar(100) null,
+)
+------------------------------------------------
+             ---parent table----
+create table branch(
+branch_id int not null primary key,
+branch_name varchar(100) null,
+city varchar(100) null,
+is_active varchar(100) null,
+)
+------------------------------------------------
+          --- parent table---
+create table level (
+level_id int not null primary key,
+level_code varchar(100) null,
+level_name varchar(100) null,
+cefr_level varchar(100) null,
+default_duration_Days int null
+)
+---------------------------------------------------
+         ---son table---
+create table batch (
+batch_id int not null primary key,
+batch_code varchar(100) null,
+batch_name varchar(100) null,
+branch_id int null,
+level_id int null,
+teacher_id int null,
+start_date date null,
+end_date date null,
+schedule varchar(100) null,
+capacity int null,
+status varchar(100) null,
+foreign key (branch_id) references branch (branch_id),
+foreign key (level_id) references level(level_id),
+foreign key (teacher_id) references teacher(teacher_id)
+)
+--------------------------------------------------
+            ---son table---
+create table session (
+session_id int not null primary key,
+batch_id int null,
+teacher_id int null,
+session_date date null,
+start_time time null,
+end_time time null,
+session_status varchar(100) null,
+foreign key (batch_id) references batch(batch_id),
+foreign key (teacher_id) references teacher(teacher_id)
+)
+----------------------------------------------------------
+          ---son table--
+create table attendance (
+AttendanceID int not null primary key,
+session_id int null,
+student_id int null,
+AttendanceStatus varchar(100) null,
+CheckInTime time null,
+foreign key (session_id) references session(session_id),
+foreign key (student_id) references student(student_id)
+)
+-----------------------------------------------
+            ---son table---
+create table batch_student(
+batch_student_id int not null primary key,
+batch_id int null,
+student_id int null,
+enrollment_date date null,
+enrollment_status varchar(100) null, 
+foreign key (batch_id) references batch(batch_id),
+foreign key (student_id) references student(student_id)
+)
+------------------------------------------------------
+           ---son table---
+create table exames(
+exam_id int not null primary key,
+exam_name varchar(100) null,
+exam_type varchar(100) null,
+level_id int null,
+exam_date date null,
+max_score int null,
+foreign key(level_id) references level(level_id)
+)
+---------------------------------------------------
+           ---son table---
+create table exam_result(
+exam_result_id int not null primary key,
+exam_id int null,
+student_id int null,
+score int null,
+result_status varchar(100) null,
+foreign key (exam_id) references exames(exam_id),
+foreign key (student_id) references student(student_id)
+)
+---------------------------------------------------
+                 ---son table---
+create table payments(
+payment_id int not null primary key,
+student_id int null,
+batch_id int null,
+payment_date date null,
+amount int null,
+payment_method varchar(100) null,
+payment_status varchar(100) null,
+reference_no varchar(100) null,
+foreign key(student_id) references student(student_id),
+foreign key (batch_id) references batch(batch_id)
+)
+---------------------------------------------------
+              ---son table---
+create table palcementtest(
+placementtest_id int not null primary key,
+student_id int null,
+test_date date null,
+listening_score int null,
+reading_score int null,
+grammar_score int null,
+speaking_score int null,
+writing_score int null,
+recommended_level_id int null,
+foreign key (student_id) references student(student_id)
+)
+---------------------------------------------------
+create or alter view dim_student as 
+select 
+s.student_id, 
+s.student_name, 
+s.gender,
+s.date_of_birth, 
+s.email,
+s.mobile, 
+s.registration_Date,
+s.is_active,
+a.AttendanceStatus,
+b.batch_name,
+l.level_name,
+br.branch_name,
+t.teacher_name
+from student s 
+inner join attendance a on a.student_id = s.student_id
+inner join batch_student bs on bs.student_id = s.student_id
+inner join batch b on bs.batch_id = b.batch_id
+inner join exam_result er on er.student_id = s.student_id
+inner join exames e on er.exam_id = e.exam_id
+inner join level l on e.level_id = l.level_id
+inner join branch br on b.branch_id = br.branch_id
+inner join teacher t on b.teacher_id = t.teacher_id
+----------------------------------------------------------------
+create view dim_teacher as 
+select 
+t.teacher_id,
+t.teacher_name,
+t.email,
+t.mobile,
+t.hire_date,
+t.is_active,
+s.student_name,
+br.branch_name,
+b.batch_name
+from teacher t
+inner join session se on se.teacher_id = t.teacher_id
+inner join attendance a on a.session_id = se.session_id
+inner join student s on a.student_id = s.student_id
+inner join batch b on b.teacher_id = t.teacher_id
+inner join branch br on b.branch_id = br.branch_id
+--------------------------------------------------------------------
+create or alter view dim_batch as 
+select 
+b.batch_id,
+b.batch_code,
+b.batch_name,
+b.end_date,
+b.schedule,
+bs.enrollment_date,
+bs.enrollment_status
+from batch b
+inner join batch_student bs on bs.batch_id = b.batch_id
+-------------------------------------------------------------------------
+create or alter view dim_exam as
+select
+e.exam_id,
+e.exam_name,
+e.exam_type,
+e.exam_date,
+er.exam_result_id,
+er.result_status,
+s.student_name
+from exames e
+inner join exam_result er on er.exam_id = e.exam_id
+inner join student s on er.student_id = s.student_id
+------------------------------------------------------------------------
+DROP TABLE IF EXISTS Dim_Date;
+Create Table Dim_Date (
+    Datekey Int Primary Key,
+    [Date] Date Null,
+    [Year] Int Null,
+    [Quarter] Int Null,
+    [Quartername] Varchar(2) Null,
+    [Month] Int Not Null,
+    [Monthname] Varchar(15) Null,
+    [Day] Int Not Null,
+    [Dayofweeknumber] Int Null,
+    [Dayofweekname] Varchar(15) Null
+);
+GO
+With Alldates AS (
+    -- تجميع كافة التواريخ الصالحة من جميع الحقول--
+    Select Try_Cast(start_date As Date) As Cleandate From batch Where start_date Is Null
+    Union All
+    Select Try_Cast(end_date As Date) From batch Where end_date Is Null
+    Union All
+    Select Try_Cast(enrollment_date As Date) From batch_student Where enrollment_date Is Null
+     Union All
+    Select Try_Cast(exam_date As Date) From exames Where exam_date Is Null
+     Union All
+    Select Try_Cast(payment_date As Date) From payments Where payment_date Is Null
+     Union All
+    Select Try_Cast(session_date As Date) From session Where session_date Is Null
+     Union All
+    Select Try_Cast(date_of_birth As Date) From student Where date_of_birth Is Null
+     Union All
+    Select Try_Cast(hire_date As Date) From teacher Where hire_date Is Null
+),
+Daterange As (
+    -- تحديد أقصى وأدنى تاريخ عبر جميع العمليات --
+    Select 
+        Min(Cleandate) As Startdate,
+        Max(Cleandate) As Enddate
+    From Alldates
+    Where Cleandate Is Not Null 
+      And Year(Cleandate) Between 1900 And 2099
+),
+Datesequence AS (
+    Select Startdate As [Date], Enddate
+    From Daterange
+    
+    UNION ALL
+    
+    Select Dateadd(Day, 1, [Date]), Enddate
+    From Datesequence
+    Where [Date] < Enddate
+)
+Insert Into Dim_Date
+Select 
+    (YEAR([Date]) * 10000) + (MONTH([Date]) * 100) + DAY([Date]) AS Datekey,
+    [Date],
+    YEAR([Date]) AS [Year],
+    Datepart(Quarter, [Date]) As [Quarter],
+    'Q' + Cast(Datepart(Quarter, [Date]) As Varchar(1)) As [Quartername],
+    Month([Date]) As [Month],
+    Datename(Month, [Date]) As [Monthname],
+    Day([Date]) As [Day],
+    Datepart(Weekday, [Date]) As [Dayofweeknumber],
+    Datename(Weekday, [Date]) As [Dayofweekname]
+From Datesequence
+Option (Maxrecursion 0);
+Go
+------------------------------------------------------------------------------------------
+                          --- converting a view to a table ---
+select *
+into dim_student_table
+from dim_student
 
+select *
+into dim_teacher_table
+from dim_teacher
+
+select * 
+into dim_batch_table
+from dim_batch
+
+select * 
+into dim_exam_table
+from dim_exam
+                     --- select pk in the tables ---
+ALTER TABLE dbo.dim_student_table 
+ADD student_sk INT IDENTITY(1,1);
+
+alter table dim_student_table 
+add constraint pk_dim_student_table primary key(student_sk)
+-------------------------------------------------------------
+alter table dim_teacher_table 
+add teacher_sk int identity(1,1)
+
+alter table dim_teacher_table
+add constraint pk_dim_teacher_table primary key(teacher_sk)
+-------------------------------------------------------------
+alter table dim_batch_table
+add batch_sk int identity(1,1)
+
+alter table dim_batch_table 
+add constraint pk_dim_batch_table primary key(batch_sk)
+----------------------------------------------------------------------------
+alter table dim_exam_table 
+add exam_sk int identity(1,1)
+
+alter table dim_exam_table
+add constraint pk_dim_exam_table primary key (exam_sk)
+-----------------------------------------------------------------------------------
+create table fact_table(
+student_sk int null,
+teacher_sk int null,
+batch_sk int null,
+exam_sk int null,
+listening_score int null,
+reading_score int null,
+grammar_score int null,
+speaking_score int null,
+writing_score int null,
+amount int null,
+score int null,
+max_score int null,
+date_key int null,
+);
+INSERT INTO fact_table(
+    student_sk,
+    teacher_sk,
+    batch_sk,
+    exam_sk,
+    listening_score,
+    reading_score,
+    grammar_score,
+    speaking_score,
+    writing_score,
+    amount,
+    score,
+    max_score,
+    date_key
+)
+SELECT
+    ds.student_sk,
+    dt.teacher_sk,
+    db.batch_sk,
+    de.exam_sk,
+    pt.listening_score,
+    pt.reading_score,
+    pt.grammar_score,
+    pt.speaking_score,
+    pt.writing_score,
+    ISNULL(p.amount, 0),
+    ISNULL(er.score, 0),
+    ISNULL(e.max_score, 0),
+    dd.Datekey
+FROM palcementtest pt
+LEFT JOIN dim_student_table ds ON pt.student_id = ds.student_id
+LEFT JOIN batch_student bs ON pt.student_id = bs.student_id
+LEFT JOIN batch b ON bs.batch_id = b.batch_id
+LEFT JOIN teacher t ON b.teacher_id = t.teacher_id
+LEFT JOIN dim_teacher_table dt ON t.teacher_id = dt.teacher_id
+LEFT JOIN dim_batch_table db ON b.batch_id = db.batch_id
+LEFT JOIN exam_result er ON pt.student_id = er.student_id
+    AND er.exam_id = (SELECT MIN(exam_id) FROM exam_result WHERE student_id = pt.student_id)
+LEFT JOIN exames e ON er.exam_id = e.exam_id
+LEFT JOIN dim_exam_table de ON e.exam_id = de.exam_id
+LEFT JOIN Dim_Date dd ON CAST(pt.test_date AS DATE) = dd.[Date]
+LEFT JOIN payments p ON pt.student_id = p.student_id;
+
+----------------------------------------------------------------
+            ---student by branch---
+select student_name , branch_name
+from dim_student_table
+----------------------------------------------------------------
+              ---Students by Language Level.---
+SELECT ds.student_name, de.exam_name
+FROM dim_student_table ds
+INNER JOIN dim_exam_table de ON ds.student_name = de.student_name;
+-----------------------------------------------------------------------
+               ---Payments by Branch and Level.---
+SELECT 
+    br.branch_name,          -- اسم الفرع
+    l.level_name,            -- اسم المستوى
+    SUM(p.amount) AS total_payments, -- إجمالي المدفوعات
+    COUNT(p.payment_id) AS total_transactions -- عدد عمليات الدفع
+FROM payments p
+-- ربط المدفوعات بالطالب
+JOIN student s ON p.student_id = s.student_id
+-- ربط المدفوعات بالـ Batch لمعرفة الفرع والمستوى المرتبطين
+JOIN batch b ON p.batch_id = b.batch_id
+-- ربط الفرع
+JOIN branch br ON b.branch_id = br.branch_id
+-- ربط المستوى
+JOIN level l ON b.level_id = l.level_id
+GROUP BY 
+    br.branch_name,
+    l.level_name
+ORDER BY 
+    br.branch_name,
+    l.level_name;
+----------------------------------------------------------------------
+                      ----Attendance % by Batch.---
+SELECT 
+    b.batch_id,
+    b.batch_code,
+    b.batch_name,
+    COUNT(a.AttendanceID) AS total_records, -- إجمالي سجلات الحضور والغياب
+    SUM(CASE WHEN a.AttendanceStatus = 'Present' THEN 1 ELSE 0 END) AS present_count, -- عدد مرات الحضور الفعلي
+    -- حساب نسبة الحضور المئوية
+    CAST(
+        (SUM(CASE WHEN a.AttendanceStatus = 'Present' THEN 1 ELSE 0 END) * 100.0) / 
+        NULLIF(COUNT(a.AttendanceID), 0) 
+        AS DECIMAL(5,2)
+    ) AS attendance_percentage
+FROM batch b
+LEFT JOIN session s ON b.batch_id = s.batch_id
+LEFT JOIN attendance a ON s.session_id = a.session_id
+GROUP BY 
+    b.batch_id,
+    b.batch_code,
+    b.batch_name
+ORDER BY 
+    attendance_percentage DESC;
+-----------------------------------------------------------------------------
+                    ---Average Exam Score and Pass Rate.---
+SELECT 
+    e.exam_id,
+    e.exam_name,
+    e.exam_type,
+    e.max_score,
+    COUNT(er.exam_result_id) AS total_students_tested, -- إجمالي عدد الطلاب الذين أُجريت لهم الاختبارات
+    AVG(CAST(er.score AS DECIMAL(5,2))) AS average_score, -- متوسط الدرجات
+    -- حساب نسبة النجاح المئوية بناءً على حالة النتيجة (مثلاً إذا كانت النتيجة 'Pass')
+    CAST(
+        (SUM(CASE WHEN er.result_status = 'Pass' THEN 1 ELSE 0 END) * 100.0) / 
+        NULLIF(COUNT(er.exam_result_id), 0) 
+        AS DECIMAL(5,2)
+    ) AS pass_rate_percentage
+FROM exames e
+LEFT JOIN exam_result er ON e.exam_id = er.exam_id
+GROUP BY 
+    e.exam_id,
+    e.exam_name,
+    e.exam_type,
+    e.max_score
+ORDER BY 
+    average_score DESC;
+---------------------------------------------------------------------------------------
+                  ---Placement Test analysis by Recommended Level.---
+SELECT 
+    l.level_id,
+    l.level_code,
+    l.level_name,
+    l.cefr_level,
+    COUNT(pt.placementtest_id) AS total_students_recommended, -- إجمالي عدد الطلاب الموصى بهم لهذا المستوى
+    AVG(CAST(pt.listening_score AS DECIMAL(5,2))) AS avg_listening_score, -- متوسط درجات الاستماع
+    AVG(CAST(pt.reading_score AS DECIMAL(5,2))) AS avg_reading_score,     -- متوسط درجات القراءة
+    AVG(CAST(pt.grammar_score AS DECIMAL(5,2))) AS avg_grammar_score,     -- متوسط درجات القواعد
+    AVG(CAST(pt.speaking_score AS DECIMAL(5,2))) AS avg_speaking_score,   -- متوسط درجات التحدث
+    AVG(CAST(pt.writing_score AS DECIMAL(5,2))) AS avg_writing_score      -- متوسط درجات الكتابة
+FROM level l
+LEFT JOIN palcementtest pt ON l.level_id = pt.recommended_level_id
+GROUP BY 
+    l.level_id,
+    l.level_code,
+    l.level_name,
+    l.cefr_level
+ORDER BY 
+    total_students_recommended DESC;
